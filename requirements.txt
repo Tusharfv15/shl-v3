@@ -1,0 +1,14 @@
+openai
+numpy
+pandas
+scikit-learn
+python-dotenv
+qdrant-client
+tqdm
+streamlit
+requests
+fastapi
+uvicorn
+aiohttp
+python-multipart
+pydantic>=2.0.0

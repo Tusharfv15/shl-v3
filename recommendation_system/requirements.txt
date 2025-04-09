@@ -1,0 +1,11 @@
+pandas
+numpy
+python-dotenv
+tqdm
+openai
+qdrant-client
+requests
+beautifulsoup4
+fastapi
+uvicorn
+pydantic
