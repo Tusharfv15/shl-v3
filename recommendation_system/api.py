@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 import uvicorn
 import sys
 from pathlib import Path
@@ -31,14 +31,19 @@ app.add_middleware(
 # Initialize recommender
 recommender = SHLRecommender()
 
-class QueryModel(BaseModel):
+# Simple model for the required endpoint
+class SimpleQueryModel(BaseModel):
     query: str
-    top_k: int = 5
-    enhanced: bool = False
+
+# Full model with all options
+class FullQueryModel(BaseModel):
+    query: str
+    top_k: Optional[int] = 10
+    enhanced: Optional[bool] = False
     filters: Optional[Dict[str, Any]] = None
 
 @app.post("/recommend", response_model=List[Dict[str, Any]])
-async def recommend(request: QueryModel):
+async def recommend(request: Union[SimpleQueryModel, FullQueryModel]):
     """
     Get SHL assessment recommendations based on a text query
     
@@ -49,11 +54,16 @@ async def recommend(request: QueryModel):
         List of assessment recommendations
     """
     try:
+        # Check if the request has the additional attributes
+        top_k = getattr(request, "top_k", 10)
+        enhanced = getattr(request, "enhanced", False)
+        filters = getattr(request, "filters", None)
+        
         results = recommender.recommend(
             query=request.query,
-            top_k=request.top_k,
-            enhanced=request.enhanced,
-            filters=request.filters
+            top_k=top_k,
+            enhanced=enhanced,
+            filters=filters
         )
         return results
     except Exception as e:
@@ -85,6 +95,17 @@ async def recommend_get(
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Add a new health check endpoint
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint to verify the API is running
+    
+    Returns:
+        Status message
+    """
+    return {"status": "healthy"}
 
 @app.post("/recommend-from-url", response_model=List[Dict[str, Any]])
 async def recommend_from_url(request: dict):
@@ -122,7 +143,8 @@ async def root():
         "message": "Welcome to the SHL Assessment Recommender API",
         "endpoints": {
             "/recommend": "POST or GET to get recommendations based on text",
-            "/recommend-from-url": "POST to get recommendations based on a URL"
+            "/recommend-from-url": "POST to get recommendations based on a URL",
+            "/health": "GET to check API health status"
         }
     }
 
